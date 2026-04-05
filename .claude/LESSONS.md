@@ -12,6 +12,22 @@
 
 ---
 
+## LESSON 2 — Deep package imports blocked by bundler module resolution
+**Date**: 2026-04-05
+**Trigger**: `import type { ToolWrapper } from '@auth0/ai-vercel/dist/esm/util/ToolWrapper'` threw TS2307 because the package.json `exports` map only exposes `.`, `./interrupts`, and `./react` — the util subpath is not listed
+**Fix**: Define the type locally inline instead of importing from a deep path not listed in the package `exports`
+**Rule**: Only import from subpaths listed in a package's `exports` field; define missing types locally
+
+---
+
+## LESSON 3 — Auth0 Token Vault requires Auth0 Pro (token-exchange grant)
+**Date**: 2026-04-05
+**Trigger**: Auth0 free plan does not support the token-exchange grant type required by @auth0/ai-vercel Token Vault
+**Fix**: Replaced Token Vault with a Supabase `user_tokens` table (AES-256-GCM encrypted). Kept `withGmailConnection`/`withGmailWriteConnection` as passthrough wrappers with identical interface so upgrading to real Token Vault is a one-file change in `lib/auth0-ai.ts`
+**Rule**: When mocking Token Vault, mirror its wrapper interface exactly (same function names, same generic passthrough) so the production upgrade path requires only one file change
+
+---
+
 <!-- Append new lessons below. Format:
 
 ## LESSON [N] — [title]

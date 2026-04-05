@@ -2,7 +2,7 @@
 
 > Hackathon: Auth0 "Authorized to Act" | Deadline: April 6, 2026 5PM PT
 
-An agentic web app where you delegate tedious real-world tasks to an AI agent. The agent uses **Auth0 Token Vault** to hold OAuth tokens, and always fires a step-up authorization card before any irreversible action. Every step is logged to an immutable audit trail.
+An agentic web app where you delegate tedious real-world tasks to an AI agent. The agent always fires a **step-up authorization card** before any irreversible action. Every step is logged to an immutable audit trail.
 
 **Deployed URL**: _(add after deployment)_
 
@@ -22,62 +22,86 @@ An agentic web app where you delegate tedious real-world tasks to an AI agent. T
 
 | Layer | Choice |
 |---|---|
-| Framework | Next.js 14 App Router, TypeScript strict |
+| Framework | Next.js 16 App Router, TypeScript strict |
 | Styling | Tailwind CSS + CSS custom properties |
-| Auth | @auth0/nextjs-auth0 + @auth0/ai-vercel (Token Vault) |
-| Agent | Vercel AI SDK v6 generateText with claude-sonnet-4-20250514 |
-| Database | Supabase (tasks, agent_steps, pending_approvals) |
+| Auth | @auth0/nextjs-auth0 |
+| Agent | Vercel AI SDK v6 + Google Gemini 1.5 Flash |
+| OAuth tokens | Supabase `user_tokens` (encrypted) → Auth0 Token Vault in production |
+| Database | Supabase (tasks, agent_steps, pending_approvals, user_tokens) |
 | Deployment | Vercel |
 
 ---
 
-## Auth0 Setup
+## Auth0 Token Vault — Production vs Demo
 
-### 1. Create M2M App for Token Exchange
+### This demo
 
-1. Auth0 Dashboard → Applications → Create Application → **Machine to Machine**
-2. Name it `Proxy Me Token Exchange`
-3. Select **Auth0 Management API** → enable: `read:users`, `read:user_idp_tokens`
-4. Advanced Settings → Grant Types → enable: `client_credentials` + token-exchange URN (`urn:ietf:params:oauth:grant-type:token-exchange`)
-5. Note the **Client ID** and **Client Secret** — these go into `AUTH0_CUSTOM_API_CLIENT_ID` and `AUTH0_CUSTOM_API_CLIENT_SECRET`
+OAuth tokens (Google/Gmail) are stored **encrypted in Supabase** (`user_tokens` table) using AES-256-GCM. The custom Google OAuth flow lives at `/api/auth/google/start` → `/api/auth/google/callback`.
 
-### 2. Set Up Google OAuth2 Connection
+The `withGmailConnection` / `withGmailWriteConnection` wrappers in `lib/auth0-ai.ts` are **passthrough** — the same interface as Token Vault, so upgrading is a one-file swap.
 
-1. Auth0 Dashboard → Authentication → Social → Create Connection → **Google OAuth2**
-2. On the Google connection settings: enable **"Store user access and refresh tokens"** (this enables Token Vault)
-3. Set up Google OAuth app in Google Cloud Console with the correct redirect URI from Auth0
+### With Auth0 Pro (production)
 
-### 3. Configure Your Main App
+Replace `lib/auth0-ai.ts` with:
 
-1. Auth0 Dashboard → Applications → your SPA/Regular Web App
-2. Advanced Settings → Grant Types → enable **Token Exchange** grant type
-3. Connections → enable the Google OAuth2 connection you created
+```typescript
+import { Auth0AI, getAccessTokenFromTokenVault } from '@auth0/ai-vercel';
+import { getRefreshToken } from './auth0';
 
-### 4. Environment Variables
+const auth0AI = new Auth0AI();
+export const withGmailConnection = auth0AI.withTokenVault({
+  connection: 'google-oauth2',
+  scopes: ['https://www.googleapis.com/auth/gmail.readonly'],
+  refreshToken: getRefreshToken,
+});
+export const withGmailWriteConnection = auth0AI.withTokenVault({
+  connection: 'google-oauth2',
+  scopes: ['https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/gmail.send'],
+  refreshToken: getRefreshToken,
+});
+export const getAccessToken = () => getAccessTokenFromTokenVault();
+```
+
+Token Vault handles storage, refresh, and rotation automatically — no `user_tokens` table needed.
+
+**Auth0 Pro setup** (when upgrading):
+1. Dashboard → Applications → Create M2M app → select Auth0 Management API → enable `read:users`, `read:user_idp_tokens`
+2. Grant Types → enable `client_credentials` + `urn:ietf:params:oauth:grant-type:token-exchange`
+3. Authentication → Social → Google OAuth2 → enable **"Store user access and refresh tokens"**
+4. Main app → Advanced Settings → Grant Types → enable Token Exchange
+
+---
+
+## Setup
+
+### 1. Environment Variables
 
 ```bash
 cp .env.local.example .env.local
 ```
 
-Fill in all values:
+Fill in all values. Key ones:
 
 ```bash
-# Auth0
+# Auth0 (user authentication)
 AUTH0_SECRET=                        # openssl rand -hex 32
 AUTH0_BASE_URL=http://localhost:3000
 AUTH0_ISSUER_BASE_URL=https://YOUR_DOMAIN.auth0.com
-AUTH0_CLIENT_ID=                     # SPA app client ID
-AUTH0_CLIENT_SECRET=                 # SPA app client secret
+AUTH0_CLIENT_ID=
+AUTH0_CLIENT_SECRET=
 AUTH0_DOMAIN=YOUR_DOMAIN.auth0.com
-AUTH0_AUDIENCE=https://YOUR_API_IDENTIFIER
 
-# Auth0 M2M (token exchange)
-AUTH0_CUSTOM_API_CLIENT_ID=          # M2M app client ID
-AUTH0_CUSTOM_API_CLIENT_SECRET=      # M2M app client secret
-GOOGLE_CONNECTION_NAME=google-oauth2
+# Google OAuth2 (Gmail access)
+# Create at: https://console.cloud.google.com/apis/credentials
+# Redirect URI: http://localhost:3000/api/auth/google/callback
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
 
-# Anthropic
-ANTHROPIC_API_KEY=
+# Token encryption
+TOKEN_ENCRYPTION_KEY=               # openssl rand -hex 32
+
+# Google AI
+GOOGLE_GENERATIVE_AI_API_KEY=
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=
@@ -85,7 +109,20 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-### 5. Supabase Schema
+### 2. Auth0 Setup
+
+1. Create an **Auth0 application** (Regular Web Application)
+2. Add `http://localhost:3000/api/auth/callback` to Allowed Callback URLs
+3. Add `http://localhost:3000` to Allowed Logout URLs
+
+### 3. Google Cloud Setup
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create OAuth 2.0 Client ID → Web Application
+3. Add `http://localhost:3000/api/auth/google/callback` as authorized redirect URI
+4. Enable Gmail API for your project
+
+### 4. Supabase Schema
 
 Run `lib/supabase/schema.sql` in your Supabase SQL editor.
 
@@ -106,17 +143,15 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Demo Scenario
 
-The demo flow uses a mock Jio broadband scenario:
-
-1. User submits: _"My Jio broadband expires next month. Find something faster and cheaper. Ask before switching."_
-2. Agent searches Gmail for billing emails → finds Jio 100Mbps @ ₹999/mo
-3. Agent searches web for broadband plans → finds ACT 300Mbps @ ₹699/mo
-4. **StepUpCard fires** — shows WHAT, WHY, IMPACT, ALTERNATIVES
-5. User taps **Authorize Action**
-6. Agent initiates signup + cancellation (mocked for demo)
+1. Sign in → Onboarding → Connect Gmail (Google OAuth consent screen)
+2. Return to dashboard → Submit: _"My Jio broadband expires next month. Find something faster and cheaper. Ask before switching."_
+3. Agent searches Gmail → finds Jio billing email
+4. Agent searches web → finds cheaper plan (ACT 300Mbps @ ₹699/mo)
+5. **StepUpCard fires** — WHAT / WHY / IMPACT / ALTERNATIVES
+6. Tap **Authorize Action** → agent proceeds (mocked signup + cancellation)
 7. Task completes with `{ savings: 3600, new_plan: "ACT 300Mbps" }`
 
-To run a pre-seeded demo (bypasses real Gmail): POST `/api/demo` after logging in.
+To run a pre-seeded demo (no real Gmail needed): POST `/api/demo` after logging in.
 
 ---
 
@@ -126,5 +161,4 @@ To run a pre-seeded demo (bypasses real Gmail): POST `/api/demo` after logging i
 npm run dev          # localhost:3000
 npm run build        # production build
 npm run lint         # ESLint
-npm run type-check   # npx tsc --noEmit
 ```

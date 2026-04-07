@@ -22,10 +22,10 @@ interface GoogleTokenResponse {
 export async function GET(req: NextRequest) {
   const session = await auth0.getSession();
   if (!session?.user?.sub) {
-    return NextResponse.redirect(new URL('/api/auth/login', req.url));
+    return NextResponse.redirect(new URL('/auth/login', req.url));
   }
 
-  const baseUrl = process.env.AUTH0_BASE_URL ?? req.nextUrl.origin;
+  const baseUrl = process.env.APP_BASE_URL ?? req.nextUrl.origin;
   const { searchParams } = req.nextUrl;
   const code = searchParams.get('code');
   const state = searchParams.get('state');

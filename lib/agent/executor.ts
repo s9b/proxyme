@@ -1,5 +1,5 @@
 import { generateText, stepCountIs } from 'ai';
-import { google } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
 import { getAllTools, setTaskContext } from './tools';
 import { SYSTEM_PROMPT } from './prompts';
 import { isApprovalRequired } from '../types';
@@ -36,7 +36,7 @@ export async function runAgent(params: ExecutorParams): Promise<ExecutorResult> 
 
   try {
     const result = await generateText({
-      model: google('gemini-1.5-flash'),
+      model: createGroq({ apiKey: process.env.GROQ_API_KEY })('moonshotai/kimi-k2-instruct'),
       system: SYSTEM_PROMPT,
       messages: initialMessages,
       tools: getAllTools(),
@@ -64,9 +64,28 @@ export async function runAgent(params: ExecutorParams): Promise<ExecutorResult> 
       }
     }
 
+    // If the agent exited without calling taskComplete, force the task to a terminal state
+    // so the frontend stops polling.
+    const { getTask, insertAgentStep } = await import('../supabase/db');
+    const currentTask = await getTask(taskId);
+    if (currentTask?.status === 'running') {
+      await insertAgentStep(taskId, 'error', 'Agent finished without completing the task. It may have run out of steps or been unable to proceed.', {});
+      await updateTaskStatus(taskId, 'failed');
+      return { status: 'failed', reason: 'Agent did not call taskComplete' };
+    }
+
     return { status: 'complete' };
   } catch (err: unknown) {
+    // Print full raw error so we can debug Groq failed_generation issues
+    console.error('[Groq raw error]', JSON.stringify(err, Object.getOwnPropertyNames(err as object)));
     const message = err instanceof Error ? err.message : 'Unknown error';
+    // Write an error step so the UI shows the real reason instead of the generic fallback
+    try {
+      const { insertAgentStep } = await import('../supabase/db');
+      await insertAgentStep(taskId, 'error', message, {});
+    } catch {
+      // non-fatal — best effort
+    }
     await updateTaskStatus(taskId, 'failed');
     return { status: 'failed', reason: message };
   }

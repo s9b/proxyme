@@ -64,7 +64,7 @@ export default async function HomePage() {
         <div style={{ textAlign: 'center' }}>
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
-            href="/api/auth/login"
+            href="/auth/login"
             style={{
               display: 'inline-block',
               background: 'var(--accent)',

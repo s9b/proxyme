@@ -61,7 +61,7 @@ export default function Nav({ user }: NavProps) {
             </span>
             {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
-              href="/api/auth/logout"
+              href="/auth/logout"
               style={{
                 fontSize: '12px',
                 color: 'var(--text-muted)',
@@ -77,7 +77,7 @@ export default function Nav({ user }: NavProps) {
         ) : (
           // eslint-disable-next-line @next/next/no-html-link-for-pages
           <a
-            href="/api/auth/login"
+            href="/auth/login"
             style={{
               fontSize: '13px',
               color: 'var(--accent)',

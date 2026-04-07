@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import type { AgentStep, TaskStatus } from '@/lib/types';
 
 interface AgentFeedProps {
@@ -51,6 +52,7 @@ export default function AgentFeed({ taskId, initialSteps, initialStatus }: Agent
   const [steps, setSteps] = useState<AgentStep[]>(initialSteps);
   const [status, setStatus] = useState<TaskStatus>(initialStatus);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const isActive = status === 'running' || status === 'pending';
 
@@ -65,15 +67,21 @@ export default function AgentFeed({ taskId, initialSteps, initialStatus }: Agent
           task: { status: TaskStatus };
           steps: AgentStep[];
         };
+        const newStatus = data.task.status;
         setSteps(data.steps);
-        setStatus(data.task.status);
+        setStatus(newStatus);
+        // When transitioning to a terminal/action-required state, refresh the server
+        // component so StepUpCard, AuditLog, and StatusBadge render with fresh data.
+        if (newStatus === 'awaiting_approval' || newStatus === 'complete' || newStatus === 'failed') {
+          router.refresh();
+        }
       } catch {
         // ignore
       }
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [taskId, status]);
+  }, [taskId, status, router]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });

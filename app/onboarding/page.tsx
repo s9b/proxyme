@@ -9,7 +9,7 @@ export default async function OnboardingPage({
 }) {
   const session = await auth0.getSession();
   if (!session?.user) {
-    redirect('/api/auth/login?returnTo=/onboarding');
+    redirect('/auth/login?returnTo=/onboarding');
   }
 
   const params = await searchParams;

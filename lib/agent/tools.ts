@@ -45,7 +45,7 @@ const readGmailThreadBase = tool({
 const sendEmailBase = tool({
   description: 'Send an email via Gmail. MUST call requestApproval before this.',
   inputSchema: z.object({
-    to: z.string().email(),
+    to: z.string().describe('Recipient email address'),
     subject: z.string(),
     body: z.string(),
   }),
@@ -77,7 +77,7 @@ const sendEmailBase = tool({
 });
 
 const searchWeb = tool({
-  description: 'Search the web for information. Use for finding service plans, prices, comparisons.',
+  description: 'Search the web for information.',
   inputSchema: z.object({
     query: z.string().describe('Search query'),
   }),
@@ -100,7 +100,7 @@ const searchWeb = tool({
 });
 
 const fetchUrl = tool({
-  description: 'Fetch and read the text content of a URL. Use to read broadband plan pages, pricing pages.',
+  description: 'Fetch text content of a URL.',
   inputSchema: z.object({
     url: z.string().url().describe('URL to fetch'),
   }),
@@ -122,11 +122,11 @@ const fetchUrl = tool({
 });
 
 const logStep = tool({
-  description: 'Log a meaningful step to the audit trail so users can follow agent progress in real time. Call this frequently.',
+  description: 'Log a step to the audit trail.',
   inputSchema: z.object({
     step_type: z.enum(['research', 'compare', 'action', 'approval', 'complete', 'error', 'info']),
-    description: z.string().describe('Human-readable description of what just happened'),
-    metadata: z.record(z.string(), z.unknown()).optional().describe('Optional key-value data'),
+    description: z.string().describe('What just happened'),
+    metadata: z.record(z.string(), z.unknown()).optional().describe('Extra data'),
   }),
   execute: async ({ step_type, description, metadata }) => {
     await insertAgentStep(_taskId, step_type, description, metadata ?? {});
@@ -135,14 +135,13 @@ const logStep = tool({
 });
 
 const taskComplete = tool({
-  description: 'Call this when the task is fully complete. Provide a result summary.',
+  description: 'Mark the task as complete.',
   inputSchema: z.object({
-    result: z.record(z.string(), z.unknown()).describe('Result data, e.g. { savings: 3600, new_plan: "ACT 300Mbps" }'),
-    summary: z.string().describe('Human-readable completion summary'),
+    summary: z.string().describe('Completion summary with key results'),
   }),
-  execute: async ({ result, summary }) => {
-    await insertAgentStep(_taskId, 'complete', summary, result);
-    await updateTaskStatus(_taskId, 'complete', { result });
+  execute: async ({ summary }) => {
+    await insertAgentStep(_taskId, 'complete', summary, {});
+    await updateTaskStatus(_taskId, 'complete', { summary });
     return { completed: true };
   },
 });
@@ -160,12 +159,12 @@ const taskFailed = tool({
 });
 
 const requestApproval = tool({
-  description: 'MANDATORY before ANY write/cancel/submit/purchase action. Pauses execution and waits for user approval. NO exceptions.',
+  description: 'Request user approval before any action.',
   inputSchema: z.object({
-    action_summary: z.string().describe('One sentence: what action is about to be taken'),
-    action_reasoning: z.string().describe('2-3 sentences: why this action is the right choice'),
-    action_impact: z.string().describe('Concrete impact, e.g. "Saves ₹8,400/yr · Old plan cancelled"'),
-    alternatives_considered: z.string().describe('What other options were evaluated and rejected'),
+    action_summary: z.string().describe('What action to take'),
+    action_reasoning: z.string().describe('Why this action'),
+    action_impact: z.string().describe('Expected impact'),
+    alternatives_considered: z.string().describe('Other options evaluated'),
   }),
   execute: async ({ action_summary, action_reasoning, action_impact, alternatives_considered }) => {
     const approval = await createApproval({
@@ -186,10 +185,10 @@ const requestApproval = tool({
 });
 
 const initiateCancellation = tool({
-  description: 'Initiate cancellation of a service. MUST call requestApproval before this. (Demo: mocked)',
+  description: 'Cancel a service (mocked demo).',
   inputSchema: z.object({
-    serviceId: z.string().describe('Service identifier, e.g. "jio-broadband"'),
-    reason: z.string().describe('Reason for cancellation'),
+    serviceId: z.string().describe('Service ID e.g. jio-broadband'),
+    reason: z.string().describe('Cancellation reason'),
   }),
   execute: async ({ serviceId, reason }) => {
     await insertAgentStep(
@@ -203,10 +202,10 @@ const initiateCancellation = tool({
 });
 
 const initiateSignup = tool({
-  description: 'Sign up for a new service/plan. MUST call requestApproval before this. (Demo: mocked)',
+  description: 'Sign up for a new service plan (mocked demo).',
   inputSchema: z.object({
-    serviceId: z.string().describe('Service identifier, e.g. "act-broadband"'),
-    planId: z.string().describe('Plan identifier, e.g. "act-300mbps-699"'),
+    serviceId: z.string().describe('Service ID e.g. act-broadband'),
+    planId: z.string().describe('Plan ID e.g. act-300mbps-699'),
   }),
   execute: async ({ serviceId, planId }) => {
     await insertAgentStep(
@@ -227,17 +226,13 @@ let _allTools: ReturnType<typeof buildTools> | null = null;
 
 function buildTools() {
   return {
-    searchGmail: withGmailConnection(searchGmailBase),
-    readGmailThread: withGmailConnection(readGmailThreadBase),
     searchWeb,
     fetchUrl,
     logStep,
-    taskComplete,
-    taskFailed,
     requestApproval,
-    sendEmail: withGmailWriteConnection(sendEmailBase),
-    initiateCancellation,
     initiateSignup,
+    initiateCancellation,
+    taskComplete,
   };
 }
 

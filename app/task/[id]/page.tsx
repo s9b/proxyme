@@ -14,7 +14,7 @@ export default async function TaskPage({
 }) {
   const session = await auth0.getSession();
   if (!session?.user?.sub) {
-    redirect('/api/auth/login');
+    redirect('/auth/login');
   }
 
   const { id } = await params;

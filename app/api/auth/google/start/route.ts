@@ -20,12 +20,12 @@ export async function GET(req: NextRequest) {
   const session = await auth0.getSession();
   if (!session?.user) {
     return NextResponse.redirect(
-      new URL('/api/auth/login?returnTo=/onboarding', req.url)
+      new URL('/auth/login?returnTo=/onboarding', req.url)
     );
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const baseUrl = process.env.AUTH0_BASE_URL ?? req.nextUrl.origin;
+  const baseUrl = process.env.APP_BASE_URL ?? req.nextUrl.origin;
 
   if (!clientId) {
     return NextResponse.json(

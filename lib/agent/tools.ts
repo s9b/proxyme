@@ -141,7 +141,7 @@ const taskComplete = tool({
   }),
   execute: async ({ summary }) => {
     await insertAgentStep(_taskId, 'complete', summary, {});
-    await updateTaskStatus(_taskId, 'complete', { summary });
+    await updateTaskStatus(_taskId, 'complete', { result: { summary } });
     return { completed: true };
   },
 });

@@ -233,6 +233,7 @@ function buildTools() {
     initiateSignup,
     initiateCancellation,
     taskComplete,
+    taskFailed,
   };
 }
 

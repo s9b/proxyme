@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { auth0 } from '@/lib/auth0';
 import { resolveApproval, getTask } from '@/lib/supabase/db';
 import { resumeAgent } from '@/lib/agent/executor';
+
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,10 +39,8 @@ export async function POST(request: NextRequest) {
     // Record the decision in Supabase
     await resolveApproval(approvalId, decision, rejectionReason);
 
-    // Resume the agent in background
-    void resumeAgent(taskId, decision, rejectionReason).catch(() => {
-      // Errors are written to Supabase inside resumeAgent
-    });
+    // Resume the agent in background — waitUntil keeps the Lambda alive on Vercel
+    waitUntil(resumeAgent(taskId, decision, rejectionReason).catch(() => {}));
 
     return NextResponse.json({ resumed: true, decision });
   } catch (err) {

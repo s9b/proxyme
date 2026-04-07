@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { waitUntil } from '@vercel/functions';
 import { auth0 } from '@/lib/auth0';
 import { createTask } from '@/lib/supabase/db';
 import { runAgent } from '@/lib/agent/executor';
+
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,11 +23,9 @@ export async function POST(request: NextRequest) {
     const userId = session.user.sub;
     const task = await createTask(userId, description.trim());
 
-    // Run agent in background — don't await, return taskId immediately
-    // This lets the frontend start polling while the agent runs
-    void runAgent({ taskId: task.id, userId, description: task.description }).catch(() => {
-      // Errors are written to Supabase inside runAgent
-    });
+    // Run agent in background — return taskId immediately so frontend can start polling,
+    // but use waitUntil so Vercel keeps the Lambda alive until the agent finishes.
+    waitUntil(runAgent({ taskId: task.id, userId, description: task.description }).catch(() => {}));
 
     return NextResponse.json({ taskId: task.id }, { status: 201 });
   } catch (err) {

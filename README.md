@@ -1,10 +1,10 @@
 # Proxy Me
 
-> Hackathon: Auth0 "Authorized to Act" 
+> Hackathon: Auth0 "Authorized to Act"
 
 An agentic web app where you delegate tedious real-world tasks to an AI agent. The agent always fires a **step-up authorization card** before any irreversible action. Every step is logged to an immutable audit trail.
 
-**Deployed URL**: _(add after deployment)_
+**Deployed URL**: https://proxyme-nine.vercel.app
 
 ---
 
@@ -25,7 +25,7 @@ An agentic web app where you delegate tedious real-world tasks to an AI agent. T
 | Framework | Next.js 16 App Router, TypeScript strict |
 | Styling | Tailwind CSS + CSS custom properties |
 | Auth | @auth0/nextjs-auth0 |
-| Agent | Vercel AI SDK v6 + Google Gemini 1.5 Flash |
+| Agent | Vercel AI SDK v6 + Groq (`moonshotai/kimi-k2-instruct`) |
 | OAuth tokens | Supabase `user_tokens` (encrypted) → Auth0 Token Vault in production |
 | Database | Supabase (tasks, agent_steps, pending_approvals, user_tokens) |
 | Deployment | Vercel |
@@ -100,8 +100,8 @@ GOOGLE_CLIENT_SECRET=
 # Token encryption
 TOKEN_ENCRYPTION_KEY=               # openssl rand -hex 32
 
-# Google AI
-GOOGLE_GENERATIVE_AI_API_KEY=
+# Groq
+GROQ_API_KEY=
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=
@@ -112,7 +112,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 ### 2. Auth0 Setup
 
 1. Create an **Auth0 application** (Regular Web Application)
-2. Add `http://localhost:3000/api/auth/callback` to Allowed Callback URLs
+2. Add `http://localhost:3000/auth/callback` to Allowed Callback URLs
 3. Add `http://localhost:3000` to Allowed Logout URLs
 
 ### 3. Google Cloud Setup

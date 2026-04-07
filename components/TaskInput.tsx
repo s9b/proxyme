@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 
 const EXAMPLE_PROMPTS = [
   'My Airtel broadband expires next month. Find something faster and cheaper. Ask before switching.',
-  "I think I'm overpaying for my phone plan. Research better options and tell me what to do.",
   'Find me the best credit card for spending on food and travel in India.',
   'My gym membership auto-renews next week. Find alternatives and ask me before you do anything.',
 ];

@@ -3,6 +3,13 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
+const EXAMPLE_PROMPTS = [
+  'My Airtel broadband expires next month. Find something faster and cheaper. Ask before switching.',
+  "I think I'm overpaying for my phone plan. Research better options and tell me what to do.",
+  'Find me the best credit card for spending on food and travel in India.',
+  'My gym membership auto-renews next week. Find alternatives and ask me before you do anything.',
+];
+
 export default function TaskInput() {
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
@@ -133,6 +140,30 @@ export default function TaskInput() {
           {error}
         </p>
       )}
+
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px' }}>
+        {EXAMPLE_PROMPTS.map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            onClick={() => setValue(prompt)}
+            style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: '2px',
+              padding: '6px 12px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-dm-sans)',
+              textAlign: 'left',
+              lineHeight: '1.4',
+            }}
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
     </form>
   );
 }

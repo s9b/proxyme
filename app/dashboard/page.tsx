@@ -48,17 +48,15 @@ function TaskCard({ task }: { task: Task }) {
   return (
     <Link
       href={`/task/${task.id}`}
+      className="task-card"
       style={{
         display: 'block',
-        border: '1px solid var(--border-subtle)',
+        border: '1px solid',
         borderRadius: '2px',
         padding: '16px 20px',
         background: 'var(--bg-elevated)',
         textDecoration: 'none',
-        transition: 'border-color 0.1s',
       }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)'; }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
         <p

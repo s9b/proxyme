@@ -60,3 +60,11 @@ h1, h2, h3, h4, h5, h6 {
 .dot-pulse {
   animation: pulse-teal 1.5s ease-in-out infinite;
 }
+
+.task-card {
+  border-color: var(--border-subtle);
+  transition: border-color 0.1s;
+}
+.task-card:hover {
+  border-color: var(--border);
+}

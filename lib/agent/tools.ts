@@ -126,7 +126,7 @@ const logStep = tool({
   inputSchema: z.object({
     step_type: z.enum(['research', 'compare', 'action', 'approval', 'complete', 'error', 'info']),
     description: z.string().describe('What just happened'),
-    metadata: z.record(z.string(), z.unknown()).optional().describe('Extra data'),
+    metadata: z.any().optional().describe('Extra data'),
   }),
   execute: async ({ step_type, description, metadata }) => {
     await insertAgentStep(_taskId, step_type, description, metadata ?? {});

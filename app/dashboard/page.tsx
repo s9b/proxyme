@@ -86,7 +86,7 @@ function TaskCard({ task }: { task: Task }) {
 export default async function DashboardPage() {
   const session = await auth0.getSession();
   if (!session?.user?.sub) {
-    redirect('/api/auth/login?returnTo=/dashboard');
+    redirect('/auth/login?returnTo=/dashboard');
   }
 
   let tasks: Task[] = [];

@@ -1,6 +1,5 @@
 # Proxy Me
 
-> Hackathon: Auth0 "Authorized to Act"
 
 An agentic web app where you delegate tedious real-world tasks to an AI agent. The agent always fires a **step-up authorization card** before any irreversible action. Every step is logged to an immutable audit trail.
 
